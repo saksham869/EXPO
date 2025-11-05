@@ -39,35 +39,46 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 //        }
         //Authorization
 
-        String requestHeader = request.getHeader("Authorization");
+    String requestHeader = request.getHeader("Authorization");
         //Bearer 2352345235sdfrsfgsdfsdf
         // logger.info(" Header :  {}", requestHeader);
         String username = null;
         String token = null;
-        if (requestHeader != null && requestHeader.startsWith("Bearer")) {
-            //looking good
-            token = requestHeader.substring(7);
+        // Expect header in format: "Bearer <token>" (note the space after Bearer)
+        if (requestHeader != null) {
+            String headerTrim = requestHeader.trim();
+            // case-insensitive check for "bearer " and tolerate extra spaces
+            if (headerTrim.length() > 6 && headerTrim.substring(0, 6).equalsIgnoreCase("bearer")) {
+                int firstSpace = headerTrim.indexOf(' ');
+                if (firstSpace > 0 && firstSpace + 1 < headerTrim.length()) {
+                    token = headerTrim.substring(firstSpace + 1).trim();
+                } else {
+                    // Bearer present but token missing
+                    logger.info("Authorization header contains 'Bearer' but no token was provided.");
+                }
+            } else {
+                // header present but not a Bearer token
+                logger.debug("Authorization header present but not a Bearer token: " + requestHeader);
+            }
+        } else {
+            // no Authorization header - do not log at INFO to avoid noise
+        }
+        // If we got a token, try to extract username and validate; otherwise continue silently
+        if (token != null) {
             try {
-
                 username = this.jwtHelper.getUsernameFromToken(token);
-
             } catch (IllegalArgumentException e) {
                 logger.info("Illegal Argument while fetching the username !!");
-                e.printStackTrace();
+                logger.debug("Exception: ", e);
             } catch (ExpiredJwtException e) {
                 logger.info("Given jwt token is expired !!");
-                e.printStackTrace();
+                logger.debug("Expired token: ", e);
             } catch (MalformedJwtException e) {
-                logger.info("Some changed has done in token !! Invalid Token");
-                e.printStackTrace();
+                logger.info("Malformed/invalid JWT token");
+                logger.debug("Malformed token exception: ", e);
             } catch (Exception e) {
-                e.printStackTrace();
-
+                logger.debug("Unexpected exception while parsing token", e);
             }
-
-
-        } else {
-            logger.info("Invalid Header Value !! ");
         }
 
 

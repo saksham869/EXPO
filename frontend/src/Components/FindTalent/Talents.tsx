@@ -17,7 +17,12 @@ const Talents=()=>{
         dispatch(resetFilter());
         dispatch(showOverlay())
         getAllProfiles().then((res) => {
-            setTalents(res);
+            // Remove any demo/test profiles matching 'azad' (case-insensitive) to avoid showing unwanted cards
+            const cleaned = (res || []).filter((p: any) => {
+                const name = (p?.name || "").toString().toLowerCase();
+                return !name.includes("azad");
+            });
+            setTalents(cleaned);
         }).catch((err) => console.log(err))
         .finally(()=>dispatch(hideOverlay()))
     },[])
